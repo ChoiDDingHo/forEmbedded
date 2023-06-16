@@ -4,7 +4,7 @@
 #include <Adafruit_VL53L0X.h>
 #include <Bitcraze_PMW3901.h>
 //----------------------------제어주기-----------------------
-#define MCU_CONTROL_RATE 8
+#define MCU_CONTROL_RATE 8 //dt값 고정
 // ------------------------------motor-----------------------------------------
 #define MIN_PULSE_LENGTH 1000
 #define MAX_PULSE_LENGTH 2000
@@ -18,6 +18,7 @@ Adafruit_VL53L0X sensor = Adafruit_VL53L0X();
 const int maxDistance = 2000;
 int height;
 
+//--------------------고도제어 PIDgain--------------------
 float target_height = 0;
 float height_in;
 float height_kp = 0.9;
@@ -49,7 +50,7 @@ double angleFiX, angleFiY, angleFiZ;
 double angvelFiX, angvelFiY, angvelFiZ;
 
 const double RADIAN_TO_DEGREE = 180 / 3.14159;  
-const double DEG_PER_SEC = 32767 / 250;    // 1초에 회전하는 각도
+const double DEG_PER_SEC = 32767 / 250;    // 1초에 회전하는 각도, 자이로 센서
 const double ALPHA = 0.992;
 
 double dt = 0;           // 한 사이클 동안 걸린 시간 변수 
@@ -273,7 +274,7 @@ void loop()
 
   dt = (free_dt - past_DT)/1000.0;
 }
-
+//-----------------------------------------------------------------------------------------------
 void initMPUSensor()
 {
   Wire.begin();
@@ -290,7 +291,7 @@ void initMPUSensor()
   Wire.write(0x10);
   Wire.endTransmission(true);  
 }
-
+//-----------------------------------------------------------------------------------------------
 void getangle()
 {
   getData();
@@ -314,7 +315,7 @@ void getangle()
   angleFiY = ALPHA * angleTmpY + (1.0 - ALPHA) * angleAcY;
   angleFiZ = angleGyZ;
 }
-
+//--------------------------------------------------------------------------------------------------
 void getData()
 {
   Wire.beginTransmission(MPU_ADDR);
@@ -330,7 +331,7 @@ void getData()
   GyY = Wire.read() << 8 | Wire.read();
   GyZ = Wire.read() << 8 | Wire.read();
 }
-
+//--------------------------------------------------------------------------------------------------
 void caliSensor()
 {
   double sumAcX = 0 , sumAcY = 0, sumAcZ = 0;
@@ -349,7 +350,7 @@ void caliSensor()
   averAcX=sumAcX/200;  averAcY=sumAcY/200;  averAcZ=sumAcY/200;
   averGyX=sumGyX/200;  averGyY=sumGyY/200;  averGyZ=sumGyZ/200;
 }
-
+//-----------------------------------------------------------------------------------------------------
 void dualPID(float target_angle,
              float angle_in,
              float rate_in,
@@ -408,7 +409,7 @@ void dualPID(float target_angle,
   prev_rate = rate_in;
   rate_prev_dterm = rate_dterm;
 }
-
+//-----------------------------------------------------------------------------------------------------------------
 void first_PID(float target_rate, float rate_in, float rate_kp, float rate_ki, float rate_kd, float &rate_pterm, float &rate_iterm, float &rate_dterm, float &output)
 {
   float rate_error;
@@ -429,7 +430,7 @@ void first_PID(float target_rate, float rate_in, float rate_kp, float rate_ki, f
   prev_rate = rate_in;
   rate_prev_dterm = rate_dterm;
 }
-
+//----------------------------------------------------------------------------------------------------------
 void PID_height(float target_height, float height_in, float height_kp, float height_ki, float height_kd, float &height_pterm, float &height_iterm, float &height_dterm, float &output)
 {
   float height_error;
@@ -454,7 +455,7 @@ void PID_height(float target_height, float height_in, float height_kp, float hei
   prev_height = height_in;
   height_prev_dterm = height_dterm;
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void PID_velocity(float target_dot, float dot_in, float dot_kp, float dot_ki, float dot_kd, float &dot_pterm, float &dot_iterm, float &dot_dterm, float &dot_output)
 {
   float dot_error;
@@ -474,7 +475,7 @@ void PID_velocity(float target_dot, float dot_in, float dot_kp, float dot_ki, fl
   prev_dot_dterm = dot_dterm;
   prev_dot = dot_in;
 }
-
+//----------------------------------------------------------------------------------------------
 void calcdot()
 {
   x_dot_in = x_dot;
@@ -501,7 +502,7 @@ void calcdot()
     y_dot_output = -3;
   }
 }
-
+//-------------------------------------------------------------------------------------------
 void calcYPRtoDualPID(){
   roll_angle_in = angleFiX;
   roll_rate_in = angvelFiX;
@@ -549,7 +550,7 @@ double mapping(float x, float b, float c, float d, float e)
 
   return result;
 }
-
+//--------------------------------------------------------------------------------------------------
 void initIR()
 {
   Wire.begin(0x69);
@@ -564,7 +565,7 @@ void initIR()
   sensor.configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT);
   sensor.startRangeContinuous();
 }
-
+//-------------------------------------------------------------------------------------------------
 void optical_vel()
 {
   x_dot = -(height*(theta_py*PI/180.0)*deltaY/(dt*Ny) - (height*(angvelFiY*PI/180.0))*1.5)/1000.0;
